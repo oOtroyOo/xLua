@@ -455,6 +455,12 @@ LUA_API int obj_indexer(lua_State *L) {
 		lua_call(L, 2, 1);
 		return 1;
 	} else {
+		xlua_getglobal(L, "_CS_FIELD_CHECK");
+		int use_field_check = lua_toboolean(L, -1);
+		if (use_field_check != 0) {
+			luaL_error(L, "cannot get ['%s'], no such field", lua_tostring(L, 2)); // throw
+		}
+		lua_pop(L, 1);
 		return 0;
 	}
 }
@@ -585,6 +591,12 @@ LUA_API int cls_indexer(lua_State *L) {
 		lua_call(L, 2, 1);
 		return 1;
 	} else {
+		xlua_getglobal(L, "_CS_FIELD_CHECK");
+		int use_field_check = lua_toboolean(L, -1);
+		if (use_field_check != 0) {
+			luaL_error(L, "cannot get static field ['%s']",lua_tostring(L, 2)); // throw
+		}
+        lua_pop(L, 1);
 		lua_pushnil(L);
 		return 1;
 	}
