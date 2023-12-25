@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Tencent is pleased to support the open source community by making xLua available.
  * Copyright (C) 2016 THL A29 Limited, a Tencent company. All rights reserved.
  * Licensed under the MIT License (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at
@@ -725,7 +725,7 @@ namespace XLua
                 {
                     if (www.isDone || !string.IsNullOrEmpty(www.error))
                     {
-                        System.Threading.Thread.Sleep(50); //�Ƚ�hacker������
+                        System.Threading.Thread.Sleep(50); //比较hacker的做法
                         if (!string.IsNullOrEmpty(www.error))
                         {
                             LuaAPI.lua_pushstring(L, string.Format(

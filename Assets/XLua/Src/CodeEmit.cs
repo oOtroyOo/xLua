@@ -1136,11 +1136,11 @@ namespace XLua
 
         static HashSet<MemberInfo> BlackList = new HashSet<MemberInfo>();
 
-        static void addToBlackList(List<string> info)
+        static void addToBlackList(Type type, List<string> info)
         {
             try
             {
-                var type = Type.GetType(info[0], true);
+                // var type = Type.GetType(info[0], true);
                 var members = type.GetMember(info[1], BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.DeclaredOnly);
                 foreach(var member in members)
                 {
@@ -1173,12 +1173,25 @@ namespace XLua
                         BlackList.Add(member);
                     }
                 }
-            } catch { }
+            }
+            catch(Exception e)
+            {
+            }
         }
 
         static void initBlackList()
         {
-            foreach (var t in Utils.GetAllTypes(true))
+            var allTypes = Utils.GetAllTypes(true);
+            Dictionary<string, Type> keySet = new Dictionary<string, Type>();
+            foreach (var type in allTypes)
+            {
+                if (type.FullName != null && !keySet.ContainsKey(type.FullName))
+                {
+                    keySet.Add(type.FullName, type);
+                }
+            }
+
+            foreach (var t in allTypes)
             {
                 if (!t.IsAbstract || !t.IsSealed) continue;
 
@@ -1191,7 +1204,10 @@ namespace XLua
                     {
                         foreach (var info in (field.GetValue(null) as List<List<string>>))
                         {
-                            addToBlackList(info);
+                            if (keySet.TryGetValue(info[0], out var type))
+                            {
+                                addToBlackList(type, info);
+                            }
                         }
                     }
                 }
@@ -1205,7 +1221,10 @@ namespace XLua
                     {
                         foreach (var info in (prop.GetValue(null, null) as List<List<string>>))
                         {
-                            addToBlackList(info);
+                            if (keySet.TryGetValue(info[0], out var type))
+                            {
+                                addToBlackList(type, info);
+                            }
                         }
                     }
                 }
