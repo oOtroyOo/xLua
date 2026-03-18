@@ -1,0 +1,194 @@
+name: Sync Fork and Build
+
+on:
+  push:
+    paths: 
+      - .github/workflows/SyncBuild.yml
+  workflow_dispatch:
+
+jobs:
+  sync-fork:
+    runs-on: ubuntu-latest
+    outputs:
+      changes: ${{ steps.sync.outputs.has_changes }}
+    steps:
+      - name: Checkout fork
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          ref: my
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Sync upstream
+        id: sync
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git remote add upstream https://github.com/Tencent/xLua.git || true
+          git fetch upstream
+          
+          if git diff --quiet HEAD upstream/master; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            git rebase upstream/master || git rebase --abort
+            # git push origin HEAD:my --force-with-lease
+          fi
+
+  android:
+    needs: sync-fork
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: my
+      - name: Cache ANDROID NDK
+        id: cache-android-ndk
+        uses: actions/cache@v4
+        with:
+          path: ~/android-ndk-r21b
+          key: android-ndk-r21b-linux
+          restore-keys: |
+            android-ndk-
+      - name: Install NDK
+        if: steps.cache-android-ndk.outputs.cache-hit != 'true'
+        run: |
+          cd ~
+          wget -O NDK -q https://dl.google.com/android/repository/android-ndk-r21b-linux-x86_64.zip
+          sudo apt install unzip -y
+          unzip -q NDK
+          ANDROID_NDK_HOME=$(pwd)/android-ndk-r21b
+      - name: Build
+        run: |
+          cd build
+          ./make_android_lua54.sh
+          ./make_android_lua53.sh
+      - name: Upload54
+        uses: actions/upload-artifact@v7
+        with:
+          path: ./build/plugin_lua54/Plugins/Android/**/*
+          name: plugin_lua54_android
+      - name: Upload53
+        uses: actions/upload-artifact@v7
+        with:
+          path: ./build/plugin_lua53/Plugins/Android/**/*
+          name: plugin_lua53_Android
+
+  ohos:
+    runs-on: ubuntu-latest
+    needs: sync-fork
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: my
+
+      - name: Cache OHOS SDK
+        id: cache-ohos
+        uses: actions/cache@v4
+        with:
+          path: ~/ohos-sdk/linux/native
+          key: ohos-sdk-native-5.1.0-linux
+          restore-keys: |
+            ohos-sdk-native-5.1.0-
+
+      - name: Install NDK
+        if: steps.cache-ohos.outputs.cache-hit != 'true'
+        run: |
+          cd ~
+          curl -O https://repo.huaweicloud.com/harmonyos/os/5.1.0-Release/ohos-sdk-windows_linux-public.tar.gz
+          tar xvfz ohos-sdk-windows_linux-public.tar.gz
+          cd ohos-sdk/linux
+          unzip -o -d ./ $(find . -name "native-linux-*")
+      - name: Build
+        run: |
+          cd build
+          chmod +x make_ohos_lua5*.sh
+          OHOS_NDK_HOME=~/ohos-sdk/linux/native ./make_ohos_lua54.sh
+          OHOS_NDK_HOME=~/ohos-sdk/linux/native ./make_ohos_lua53.sh
+      - name: Upload54
+        uses: actions/upload-artifact@v7
+        with:
+          path: ./build/plugin_lua54/Plugins/OpenHarmony/**/*
+          name: plugin_lua54_OpenHarmony
+      - name: Upload53
+        uses: actions/upload-artifact@v7
+        with:
+          path: ./build/plugin_lua53/Plugins/OpenHarmony/**/*
+          name: plugin_lua53_OpenHarmony
+  ios:
+    runs-on: macos-latest
+    needs: sync-fork
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: my
+
+      - name: Build
+        run: |
+          cd build
+          ./make_ios_lua54.sh
+          ./make_ios_lua53.sh
+      - name: Upload54
+        uses: actions/upload-artifact@v7
+        with:
+          path: ./build/plugin_lua54/Plugins/iOS/**/*
+          name: plugin_lua54_ios
+      - name: Upload53
+        uses: actions/upload-artifact@v7
+        with:
+          path: ./build/plugin_lua53/Plugins/iOS/**/*
+          name: plugin_lua53_iOS
+  windows:
+    runs-on: windows-2022
+    needs: sync-fork
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: my
+      
+      - name: Insatll MSVC
+        uses: microsoft/setup-msbuild@v2
+      
+      - name: Build53
+        run: |
+          cd build
+          .\make_win64_lua53.bat
+        shell: cmd
+      - name: Build54
+        run: |
+          cd build
+          .\make_win_lua54.bat
+        shell: cmd
+      - name: Build LuaC
+        run: |
+          cd build/luac
+          .\make_win64.bat
+        shell: cmd
+      - name: Upload54
+        uses: actions/upload-artifact@v7
+        with:
+          path: ./build/plugin_lua54/Plugins/x86_64/**/*
+          name: plugin_lua54_windows
+      - name: Upload53
+        uses: actions/upload-artifact@v7
+        with:
+          path: ./build/plugin_lua53/Plugins/x86_64/**/*
+          name: plugin_lua53_windows
+      - name: UploadLuaC
+        uses: actions/upload-artifact@v7
+        with:
+          path: ./build/luac/build64/Release/**/*
+          name: lua_c_windows
+  notify-completion:
+    needs: [android, ohos, ios, windows]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Check build status
+        run: |
+          if [ "${{ needs.android.result }}" = "success" ] && [ "${{ needs.ohos.result }}" = "success" ] && [ "${{ needs.ios.result }}" = "success" ] && [ "${{ needs.windows.result }}" = "success" ]; then
+            echo "✅ All builds completed successfully!"
+          else
+            echo "❌ Some builds failed"
+            exit 1
+          fi
