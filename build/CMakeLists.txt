@@ -112,6 +112,34 @@ else ( )
     list (APPEND LUA_SOCKET luasocket/usocket.c)
 endif ( )
 
+
+#begin lua-profobuf
+set (LPB_SRC 
+	lua-protobuf/pb.c
+)
+set_property(
+	SOURCE ${LPB_SRC}
+	APPEND
+	PROPERTY COMPILE_DEFINITIONS
+	LUA_LIB
+)
+list(APPEND THIRDPART_INC lua-protobuf)
+set (THIRDPART_SRC ${THIRDPART_SRC} ${LPB_SRC})
+#end lua-protobuf
+
+
+#begin lua-rapidjson
+set (RAPIDJSON_SRC lua-rapidjson/source/rapidjson.cpp)
+set_property(
+ SOURCE ${RAPIDJSON_SRC}
+ APPEND
+ PROPERTY COMPILE_DEFINITIONS
+ LUA_LIB
+)
+list(APPEND THIRDPART_INC lua-rapidjson/include)
+set (THIRDPART_SRC ${THIRDPART_SRC} ${RAPIDJSON_SRC})
+#end lua-rapidjson
+
 set ( XLUA_CORE
     i64lib.c
     xlua.c
