@@ -393,6 +393,11 @@ void print_value(lua_State *L,  char *str, int idx) {
 	lua_call(L, 2, 0);
 }
 
+static int cs_field_throw = 0;
+LUA_API void xlua_cs_field_throw (int n) {
+	cs_field_throw=n;
+}
+
 //upvalue --- [1]: methods, [2]:getters, [3]:csindexer, [4]:base, [5]:indexfuncs, [6]:arrayindexer, [7]:baseindex
 //param   --- [1]: obj, [2]: key
 LUA_API int obj_indexer(lua_State *L) {	
@@ -461,10 +466,9 @@ LUA_API int obj_indexer(lua_State *L) {
 		lua_insert(L, 1);
 		lua_call(L, 2, 1);
 		return 1;
-	} else {
-		xlua_getglobal(L, "_CS_FIELD_CHECK");
-		int use_field_check = lua_toboolean(L, -1);
-		if (use_field_check != 0) {
+	} else {	
+		if (cs_field_throw != 0)
+		{
 			luaL_error(L, "cannot get ['%s'], no such field", lua_tostring(L, 2)); // throw
 		}
 		lua_pop(L, 1);
@@ -598,12 +602,12 @@ LUA_API int cls_indexer(lua_State *L) {
 		lua_call(L, 2, 1);
 		return 1;
 	} else {
-		xlua_getglobal(L, "_CS_FIELD_CHECK");
-		int use_field_check = lua_toboolean(L, -1);
-		if (use_field_check != 0) {
+		if (cs_field_throw != 0)
+		{
 			luaL_error(L, "cannot get static field ['%s']",lua_tostring(L, 2)); // throw
 		}
-        lua_pop(L, 1);
+		lua_pop(L, 1);
+
 		lua_pushnil(L);
 		return 1;
 	}
