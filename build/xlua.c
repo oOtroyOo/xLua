@@ -203,7 +203,14 @@ LUA_API void xlua_pushlstring (lua_State *L, const char *s, int len) {
 
 LUALIB_API int xluaL_loadbuffer (lua_State *L, const char *buff, int size,
                                 const char *name) {
-	return luaL_loadbuffer(L, buff, size, name);
+	if (size >= 3 
+		&& (unsigned char)buff[0] == 0xEF 
+		&& (unsigned char)buff[1] == 0xBB 
+		&& (unsigned char)buff[2] == 0xBF) {
+		return luaL_loadbuffer(L, buff+3, size-3, name);
+	} else {
+		return luaL_loadbuffer(L, buff, size, name);
+	}	
 }
 
 static int c_lua_gettable(lua_State* L) {    
