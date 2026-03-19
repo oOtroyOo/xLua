@@ -1,4 +1,4 @@
-using XLua;
+﻿using XLua;
 using System.Collections.Generic;
 using System;
 
@@ -117,7 +117,7 @@ public class XLuaTest
             ");
             Console.WriteLine("2 + 4 =" + calc2.Add(2, 4));
 
-            //�ͷ�hotfix
+            //释放hotfix
             luaenv.DoString(@"
                 xlua.hotfix(CS.Calc, 'Add', nil)
                 xlua.hotfix(CS.CalcByConfig, 'Add', nil)
