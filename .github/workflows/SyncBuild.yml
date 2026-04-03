@@ -73,6 +73,16 @@ jobs:
         with:
           path: ./build/plugin_lua53/Plugins/Android/**/*
           name: plugin_lua53_Android
+      - name: BuildJIT
+        run: |
+          cd build
+          sudo apt install gcc-multilib libncurses5 -y
+          ./make_android_luajit_arm64.sh  
+      - name: UploadJit
+        uses: actions/upload-artifact@v7
+        with:
+          path: ./build/plugin_luajit/Plugins/Android/**/*
+          name: plugin_luajit_android
 
   ohos:
     runs-on: ubuntu-latest
@@ -179,6 +189,15 @@ jobs:
         with:
           path: ./build/luac/build64/Release/**/*
           name: lua_c_windows
+      - name: Build Luajit
+        run: |
+          cd build
+          .\make_win64_luajit.bat
+      - name: UploadJit
+        uses: actions/upload-artifact@v4
+        with:
+          path: ./build/plugin_luajit/**/*
+          name: plugin_luajit_window
   notify-completion:
     needs: [android, ohos, ios, windows]
     runs-on: ubuntu-latest
